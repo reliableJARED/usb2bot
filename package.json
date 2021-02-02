@@ -1,0 +1,31 @@
+{
+  "name": "usb2bot",
+  "version": "1.0.0",
+  "description": "one client connects to another, controls a usb connected Arduino Leonardo",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "10.16.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reliableJARED/usb2bot.git"
+  },
+  "keywords": [
+    "Arduino",
+    "Peer2peer",
+    "node",
+    "javascript"
+  ],
+  "author": "reliablejared",
+  "license": "ISC",
+  "dependencies": {
+    "engine.io-client": "^4.0.4",
+    "express": "^4.17.1",
+    "serve-static": "^1.14.1",
+    "socket.io": "^3.0.3",
+    "socket.io-client": "^3.0.3"
+  }
+}

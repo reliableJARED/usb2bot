@@ -17,7 +17,7 @@ const http = require('http').Server(app);
 //A server that integrates with (or mounts on) the Node.JS HTTP Server: socket.io
 const io = require('socket.io')(http);
 
-const port = process.env.PORT || 1;
+const port = process.env.PORT || 5000;
 
 /************************************** 
 https://github.com/reliableJARED/VideoChatRoom/blob/main/index.js
@@ -59,8 +59,7 @@ const roomPasswordLocker =( ()=>{
   //cheat sheet
   //https://socket.io/docs/v3/emit-cheatsheet/index.html
   io.sockets.on("connection", socket => {
-	
-  
+	 
 	// convenience function to log server messages on the client
 	function log(stringMsg) {
 	  socket.emit('log', stringMsg);
@@ -83,6 +82,9 @@ const roomPasswordLocker =( ()=>{
   }
   
   socket.on('create or join', (room,password) =>{
+	  //tell the client their socket ID
+	  //socket.emit('SocketID',socket.id);
+
 	  //MAXIMUM Room Members
 	  const maxRoomMembers = 5;
 	  
@@ -228,6 +230,11 @@ const roomPasswordLocker =( ()=>{
 	  log('received bye from '+socket.id);
 	  //tell everyone they left
 	  socket.to(room).emit('bye',socket.id)
+	});
+
+	socket.on("x", function(id,data) {       
+		io.to(id).emit("x", socket.id, data);
+		
 	});
 	
   });

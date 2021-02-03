@@ -1,3 +1,4 @@
+
 /************** RESOURCES
 
 Google Code Labs
@@ -24,8 +25,14 @@ https://shanetully.com/2014/09/a-dead-simple-webrtc-example/
 */
 
 'use strict';
+
+//const client = require("engine.io-client");
+
 let room = null;
 var socket = io.connect();
+var ARDUINO_SocketID = null; //SET IN ANSWER
+
+
 
 //create the bilateral communication object, RTCpeerconnection
 //will have the local and remote connection information, will need to get info from
@@ -99,7 +106,6 @@ startButton.onclick = (() =>{
   */
 
   let password = '1234' //document.getElementById('password').value;
-
   console.log(room,password)
 
   if (room !== '') {
@@ -109,7 +115,7 @@ startButton.onclick = (() =>{
 });
 
 //Start our connection to the server
-socket.on('connect',(msg)=>{
+socket.on('connect',()=>{
   console.log("CONNECTED");
 });
 
@@ -150,8 +156,6 @@ async function addMediaTrackToRemotePeerConnection(remotePeerConnection){
 function createPeerConnectionOffer (RemoteSocketID){
   //iceConfig global 
   const remotePeerConnection = new RTCPeerConnection(iceConfig);
-
-
   //IMPORTANT - everything has to wait for userMedia
  addMediaTrackToRemotePeerConnection(remotePeerConnection)
  .then((rpc) =>{
@@ -204,6 +208,10 @@ function createRemoteVideoHTMLNode (id){
   return;
 }
 socket.on("offer", (id, description) => {
+  //
+  //CLIENT IN/MAKING THE ROOM RECEIVES THIS, THEY ARE THE "LOCAL CLIENT"
+  //
+  console.log('OFFER');
   //////// SO Similar to the createPeerConnectionOffer flow, should really combine in to a few single working functions
 
   //create a video element to hold the remote stream
@@ -212,18 +220,18 @@ socket.on("offer", (id, description) => {
   //create a new RTCPeerConnection object to be associated with this offer
   const remotePeerConnection = new RTCPeerConnection(iceConfig);
   
+  //add it to the list of all connections
   allPeerConnections[id] = remotePeerConnection;
+  
+  
   navigator.mediaDevices.getUserMedia(constraints)
  .then(
    (stream)=>{
      stream.getTracks().forEach(track => remotePeerConnection.addTrack(track, stream));
      return remotePeerConnection
    })
-   .then(
-  remotePeerConnection.setRemoteDescription(description)
-    ).then(
-      () => remotePeerConnection.createAnswer()
-      )
+   .then(remotePeerConnection.setRemoteDescription(description))
+   .then(() => remotePeerConnection.createAnswer())
     .then(sdp => remotePeerConnection.setLocalDescription(sdp))
     .then(() => {
       socket.emit("answer", id, remotePeerConnection.localDescription);
@@ -235,6 +243,7 @@ socket.on("offer", (id, description) => {
     //set the remote stream to our video html element
     remoteVideoElement.srcObject = event.streams[0];
   };
+
   remotePeerConnection.onicecandidate = event=>{
     if (event.candidate) {
        socket.emit("candidate", id, event.candidate);
@@ -243,11 +252,19 @@ socket.on("offer", (id, description) => {
 });
 
 
-socket.on("answer", (id, description) => {
-   //create a video element to hold the remote stream
-   createRemoteVideoHTMLNode (id);
 
+socket.on("answer", (id, description) => {
+  //
+  //THE JOINING CLIENT RECEIVES THIS, THEY ARE THE "REMOTE CLIENT"
+  //
+  console.log('ANSWER');
+  ARDUINO_SocketID = id;
+
+   //create a video element to hold the remote stream
+   createRemoteVideoHTMLNode(id);
+  
    allPeerConnections[id].setRemoteDescription(description)
+
 
   allPeerConnections[id].ontrack = event => {
     //remoteVideo html element
@@ -261,6 +278,8 @@ socket.on("answer", (id, description) => {
       socket.emit("candidate", id, event.candidate);
     }
   };
+
+
 });
 
 
@@ -295,6 +314,18 @@ socket.on('full',(room)=>{
   //pass.value = '';
 });
 
+//Handle received data
+socket.on('x',(id,data)=>{
+  console.log(id);
+  console.log(data);
+});
+
+
+
+
+
+
+
 window.addEventListener('beforeunload', function (e) {
   socket.emit('bye',room);
   // the absence of a returnValue property on the event will guarantee the browser unload happens
@@ -305,8 +336,6 @@ window.addEventListener('beforeunload', function (e) {
 function learnFromMistakes(youFailed){
   console.log('so close, here is where it all went wrong:',youFailed)
 }
- 
-
 /*
 *
 *
@@ -318,6 +347,8 @@ ARDUINO LEONARDO CONNECTOR below
 *
 *
 */
+
+
 
 (function() {
   'use strict';
@@ -433,6 +464,9 @@ ARDUINO LEONARDO CONNECTOR below
 
               //visual update of speed
               document.getElementById('motorSpeed').value = newSpeed;
+
+              //send via socket to other connected computer
+              socket.emit('x',ARDUINO_SocketID, update);
 
               port.send(update);
             }

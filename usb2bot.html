@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--  origin = https://webusb.github.io, expires = 2017-06-19 -->
+    <meta http-equiv="origin-trial" data-feature="WebUSB (For Chrome M57+)">
+    <title>USB and Arduino Leonardo Web Control</title>
+   
+    
+  </head>
+  <body>
+    <style>
+      video {
+        vertical-align:middle;
+        width: auto;
+      }
+      
+      #localVideo {
+        width:20%;
+      }
+
+      video {
+          vertical-align:middle;
+          width: auto;
+        }
+        
+        #localVideo {
+          width:20%;
+        }
+
+      </style>
+  
+    <body>
+    
+      <body>
+        
+        <video id="localVideo" autoplay muted playsinline></video><!-- no local sound -->
+    
+        <div id="remoteVideoContainer">
+          
+        </div>
+     
+         <div>
+          <label for="room">Enter a Room name to Join or Create:</label><br>
+          <input type="text" id="room" name="room"><br>
+         <!-- <label hiden id="passwordTxt" for="password">Enter or set password for the room</label><br>
+          <input hiden type="text" id="password" name="password"><br><br>
+         -->
+          <input id="submit" type="submit" value="ENTER">
+        </div>
+      
+
+    <p>
+      <button id="connect">Connect</button> <span id="status"></span>
+    </p>
+    <input type="range" min="0" max="255" value="0" id="motorSpeed"/>
+
+     <!--  <script src="/public/js/socket.io.min.js"></script>-->
+
+     <script src="serial.js"></script>
+    
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.js"></script>
+ 
+     <script src="interface.js"></script>
+
+  </body>
+</html>

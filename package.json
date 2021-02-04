@@ -4,7 +4,8 @@
   "description": "usb connection of Arduino Leonardo to browser",
   "main": "index.js",
   "scripts": {
-	"start": "node index.js"
+	"start": "node index.js",
+	"test": "echo \"Error: no test specified\" && exit 1"
 		},
 
   "engines": {
@@ -12,14 +13,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/reliableJARED"
+    "url": "https://github.com/reliableJARED/usb2bot.git"
   },
   "keywords": [
        "javascript"
   ],
   "author": "reliablejared",
   "dependencies": {
+    "engine.io-client": "^4.0.4",
     "express": "^4.17.1",
-    "serve-static": "^1.14.1"
-  }
+    "serve-static": "^1.14.1",
+    "socket.io": "^3.0.3",
+    "socket.io-client": "^3.0.3"  
+	}
 }

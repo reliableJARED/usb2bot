@@ -118,14 +118,19 @@ const roomPasswordLocker =( ()=>{
 		set_roomPasswordLocker(room,password);
 		
 		log('room '+room+' not found, making room ' +room);
+		
 		//add client to the new room
 		socket.join(room);
+		
 		//update room member count after join
 		clientsInRoom = io.sockets.adapter.rooms.get(room).size;
+		
 		//flag client as first attendee in room
 		isInitiatorClient = true;
+		
 		//tell cleint room joined
-		socket.emit('joined',room,socket.id,isInitiatorClient);
+		socket.emit('joined',room,socket.id,isInitiatorClient); //this doesn't seem to have a handler on client side
+		
 		//debug logs
 		log('Client ID ' + socket.id + ' created room ' + room);
 		log('Room: ' + room + ' now has ' + clientsInRoom + ' client(s)');
@@ -150,7 +155,7 @@ const roomPasswordLocker =( ()=>{
 		  log('Client ID ' + socket.id + ' joined room ' + room);
 		  
 		  //tell cleint, they joined
-		  socket.emit('joined', room, socket.id,isInitiatorClient);
+		  socket.emit('joined', room, socket.id,isInitiatorClient);//this doesn't seem to have a handler on client side
 		  
 		  //DROP THIS - newMember is only one who knows who is in room, starts the connection handshake
 		  //tell all clients, except sender, a new member joinded the room
@@ -171,9 +176,7 @@ const roomPasswordLocker =( ()=>{
 		  //convert Set object to Array
 		  let allRoomMembers_array = Array.from(allRoomMembers);
   
-		  
-  
-  
+
 		  //tell sender who is in the room, excluding self
 		  socket.emit('newRoomMember',room,allRoomMembers_array);
   

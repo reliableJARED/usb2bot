@@ -324,10 +324,9 @@ socket.on('full',(room)=>{
   //pass.value = '';
 });
 
-//Handle received data
-socket.on('x',(id,data)=>{
-  console.log(id);
-  console.log(data);
+socket.on('joined',(room,socketid,isInitiatorClient)=>{
+  console.log('joined socket msg');
+  console.log(room,socketid,isInitiatorClient);
 });
 
 
@@ -401,12 +400,14 @@ ARDUINO LEONARDO CONNECTOR below
         /* ADD Data Channel CLose */
       } else {
         serial.requestPort().then(selectedPort => {
-         console.log(allPeerConnections[ARDUINO_SocketID])
+         //console.log(allPeerConnections[ARDUINO_SocketID])
+          /*______________ DATA CHANNEL     
           allPeerConnections[ARDUINO_SocketID].ondatachannel = e => {
             dataChannel_arduino = e.channel;
             dataChannel_arduino.onopen = () => log("Chat!");
             dataChannel_arduino.onmessage = e => log("> " + e.data);
-          };
+            
+          };*/
  
           port = selectedPort;
           
@@ -428,7 +429,14 @@ ARDUINO LEONARDO CONNECTOR below
       }
     });
 
-    
+    //Handle received data
+socket.on('x',(id,data)=>{
+    console.log(id);
+    console.log(data);
+    port.send(data);
+  });
+
+
 
 
   });
@@ -499,10 +507,12 @@ function controllerPoll(dc,speed){
         document.getElementById('motorSpeed').value = newSpeed;
 
         //send via socket to other connected computer
-        //socket.emit('x',ARDUINO_SocketID, update);
+        socket.emit('x',ARDUINO_SocketID, update);
+        /*______________ DATA CHANNEL 
         if (dc.readyState === "open"){
           dc.send('test');
         }
+        */
 
 
         //port.send(update);
@@ -527,12 +537,13 @@ window.addEventListener("gamepadconnected", function(e){
   //unhide the connect button to start the Arduino link and open the data channel
   document.getElementById('connect').style.visibility = 'visible';
 
-  console.log(allPeerConnections[ARDUINO_SocketID]);
-
-           
-  dataChannel_control = allPeerConnections[ARDUINO_SocketID].createDataChannel('data');
-  dataChannel_control.onopen = () => (data.disabled = false, data.select());
-  dataChannel_control.onmessage = (event)=>{console.log(event.data)}
+  if(allPeerConnections[ARDUINO_SocketID]){    
+    /*______________ DATA CHANNEL     
+    dataChannel_control = allPeerConnections[ARDUINO_SocketID].createDataChannel('data');
+    dataChannel_control.onopen = () => (data.disabled = false, data.select());
+    dataChannel_control.onmessage = (event)=>{console.log(event.data)}
+    */
+  }
   
   //starting speed 
   var speed = 0;

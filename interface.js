@@ -30,7 +30,7 @@ https://shanetully.com/2014/09/a-dead-simple-webrtc-example/
 
 let room = null;
 var socket = io.connect();
-var ARDUINO_SocketID = null; //SET IN ANSWER
+var ARDUINO_SocketID = false; //SET IN ANSWER
 
 
 
@@ -207,12 +207,15 @@ function createRemoteVideoHTMLNode (id){
   document.getElementById('remoteVideoContainer').appendChild(remoteVideo)
   return;
 }
+
+
 socket.on("offer", (id, description) => {
   //
   //CLIENT IN/MAKING THE ROOM RECEIVES THIS, THEY ARE THE "LOCAL CLIENT"
   //
   console.log('OFFER');
   //////// SO Similar to the createPeerConnectionOffer flow, should really combine in to a few single working functions
+  
 
   //create a video element to hold the remote stream
   createRemoteVideoHTMLNode (id);
@@ -220,14 +223,20 @@ socket.on("offer", (id, description) => {
   //create a new RTCPeerConnection object to be associated with this offer
   const remotePeerConnection = new RTCPeerConnection(iceConfig);
   
+  
   //add it to the list of all connections
   allPeerConnections[id] = remotePeerConnection;
+
+
+
   
   
   navigator.mediaDevices.getUserMedia(constraints)
  .then(
    (stream)=>{
      stream.getTracks().forEach(track => remotePeerConnection.addTrack(track, stream));
+
+
      return remotePeerConnection
    })
    .then(remotePeerConnection.setRemoteDescription(description))
@@ -252,34 +261,35 @@ socket.on("offer", (id, description) => {
 });
 
 
-
 socket.on("answer", (id, description) => {
   //
   //THE JOINING CLIENT RECEIVES THIS, THEY ARE THE "REMOTE CLIENT"
   //
   console.log('ANSWER');
-  ARDUINO_SocketID = id;
 
-   //create a video element to hold the remote stream
-   createRemoteVideoHTMLNode(id);
+  if(!ARDUINO_SocketID){
+    //sets to the first connected client - consider making it an option to choose which video to connect arduino with
+    ARDUINO_SocketID = id;
+    console.log('ARDUINO_SocketID is set')
+  }
   
-   allPeerConnections[id].setRemoteDescription(description)
 
+  //create a video element to hold the remote stream
+  createRemoteVideoHTMLNode(id);
+  
+  allPeerConnections[id].setRemoteDescription(description)
 
   allPeerConnections[id].ontrack = event => {
-    //remoteVideo html element
-    const remoteVideoElement = document.getElementById(id);
-    //set the remote stream as the video source
-    remoteVideoElement.srcObject = event.streams[0];
+      //remoteVideo html element
+      const remoteVideoElement = document.getElementById(id);
+      //set the remote stream as the video source
+      remoteVideoElement.srcObject = event.streams[0];
   };
   allPeerConnections[id].onicecandidate = event => {
-
-    if (event.candidate) {
-      socket.emit("candidate", id, event.candidate);
-    }
-  };
-
-
+      if (event.candidate) {
+        socket.emit("candidate", id, event.candidate);
+      }
+  };  
 });
 
 
@@ -357,7 +367,12 @@ ARDUINO LEONARDO CONNECTOR below
     let connectButton = document.querySelector("#connect");
     let statusDisplay = document.querySelector('#status');
     let motorSpeed = document.querySelector('#motorSpeed');
+    //hide the connection button for now; unhide when controller is connected
+    connectButton.style.visibility = 'hidden';
+
     let port;
+    let dataChannel_arduino; //used for RTC data channel using the existing video channel
+
 
     function connectUSB() {
       port.connect().then(() => {
@@ -383,10 +398,20 @@ ARDUINO LEONARDO CONNECTOR below
         connectButton.textContent = 'Connect';
         statusDisplay.textContent = '';
         port = null;
+        /* ADD Data Channel CLose */
       } else {
         serial.requestPort().then(selectedPort => {
+         console.log(allPeerConnections[ARDUINO_SocketID])
+          allPeerConnections[ARDUINO_SocketID].ondatachannel = e => {
+            dataChannel_arduino = e.channel;
+            dataChannel_arduino.onopen = () => log("Chat!");
+            dataChannel_arduino.onmessage = e => log("> " + e.data);
+          };
+ 
           port = selectedPort;
+          
           connect();
+
         }).catch(error => {
           statusDisplay.textContent = error;
         });
@@ -403,94 +428,114 @@ ARDUINO LEONARDO CONNECTOR below
       }
     });
 
-    function controller(){
-   
-        let gamepad = navigator.getGamepads()[0];
-        //axes [left horz, left vert, right horz, right vert]
-        //left axes forward is -1, backwards 1
-        let change = gamepad.axes[1];
-        return [-change];
-        
-        /*
-        //PS Controller setup.  These are D-Pad buttons
-        //let left = -gamepad.buttons[14].value;
-        //let right = gamepad.buttons[15].value;
-        let down = -gamepad.buttons[13].value;
-        let up = gamepad.buttons[12].value;
-        return [up+down]
-        */
-      }
-
-      function controllerPoll(speed){
-        //set min max for the motor speed
-        let maxSpeed = 255; 
-        let minSpeed = 0;
-        let newSpeed = speed;
-
-        //console.log('current speed: ', speed);
-        //poll controller state
-        let userInput = controller();
-
-        //update the speed from user input. 
-        //userInput should be 0, 1 or -1
-        newSpeed += userInput[0];
-
-        //fix speed in the event it has gone out of bounds
-        if(newSpeed < minSpeed){
-          newSpeed = minSpeed;
-        }
-        if(newSpeed > maxSpeed){
-          newSpeed = maxSpeed;
-        }
-
-
- 
-        //cap the max and min to the motor speed range
-        if(newSpeed <= maxSpeed && newSpeed  >= minSpeed){
-
-          //if we are in the range, check that speed isn't the same as it was previously
-          if(speed != newSpeed){
-
-            //let gamepad = navigator.getGamepads()[0];
-            //console.log(gamepad);
-
-              console.log('speed is changing: ', newSpeed);
-              
-              //send update to the USB connected arduino leonardo
-              let update = new Uint8Array(2);
-              update[0] = newSpeed;
-              update[1] = 0; //place holder for later use
-              console.log(update[0])
-
-              //visual update of speed
-              document.getElementById('motorSpeed').value = newSpeed;
-
-              //send via socket to other connected computer
-              socket.emit('x',ARDUINO_SocketID, update);
-
-              port.send(update);
-            }
-          }    
-        
-
-        //LOOP
-        //https://stackoverflow.com/questions/19893336/how-can-i-pass-argument-with-requestanimationframe
-        window.requestAnimationFrame(() => {
-          controllerPoll(newSpeed)
-          });
-        //requestAnimationFrame(animate(posX,posY)); -- THIS WONT WORK
-      }
-
-      window.addEventListener("gamepadconnected", function(e){
-        console.log('gamepad connected: %s',e.gamepad.id);
-        
-        //starting speed 
-        var speed = 0;
-        
-        controllerPoll(speed);
-      });
-
+    
 
 
   });
 })();
+
+
+function controller(){
+   
+  let gamepad = navigator.getGamepads()[0];
+  //axes [left horz, left vert, right horz, right vert]
+  //left axes forward is -1, backwards 1
+  let change = gamepad.axes[1];
+  return [-change];
+  
+  /*
+  //PS Controller setup.  These are D-Pad buttons
+  //let left = -gamepad.buttons[14].value;
+  //let right = gamepad.buttons[15].value;
+  let down = -gamepad.buttons[13].value;
+  let up = gamepad.buttons[12].value;
+  return [up+down]
+  */
+}
+
+
+function controllerPoll(dc,speed){
+  //set min max for the motor speed
+  let maxSpeed = 255; 
+  let minSpeed = 0;
+  let newSpeed = speed;
+
+  //console.log('current speed: ', speed);
+  //poll controller state
+  let userInput = controller();
+
+  //update the speed from user input. 
+  //userInput should be 0, 1 or -1
+  newSpeed += userInput[0];
+
+  //fix speed in the event it has gone out of bounds
+  if(newSpeed < minSpeed){
+    newSpeed = minSpeed;
+  }
+  if(newSpeed > maxSpeed){
+    newSpeed = maxSpeed;
+  }
+
+
+
+  //cap the max and min to the motor speed range
+  if(newSpeed <= maxSpeed && newSpeed  >= minSpeed){
+
+    //if we are in the range, check that speed isn't the same as it was previously
+    if(speed != newSpeed){
+
+      //let gamepad = navigator.getGamepads()[0];
+      //console.log(gamepad);
+
+        //console.log('speed is changing: ', newSpeed);
+        
+        //send update to the USB connected arduino leonardo
+        let update = new Uint8Array(2);
+        update[0] = newSpeed;
+        update[1] = 0; //place holder for later use
+        //console.log(update[0])
+
+        //visual update of speed
+        document.getElementById('motorSpeed').value = newSpeed;
+
+        //send via socket to other connected computer
+        //socket.emit('x',ARDUINO_SocketID, update);
+        if (dc.readyState === "open"){
+          dc.send('test');
+        }
+
+
+        //port.send(update);
+      }
+    }    
+  
+
+  //LOOP
+  //https://stackoverflow.com/questions/19893336/how-can-i-pass-argument-with-requestanimationframe
+  window.requestAnimationFrame(() => {
+    controllerPoll(dc,newSpeed)
+    });
+  //requestAnimationFrame(controllerPoll(posX,posY)); -- THIS WONT WORK
+}
+
+var dataChannel_control;
+
+window.addEventListener("gamepadconnected", function(e){
+ 
+  console.log('gamepad connected: %s',e.gamepad.id);
+
+  //unhide the connect button to start the Arduino link and open the data channel
+  document.getElementById('connect').style.visibility = 'visible';
+
+  console.log(allPeerConnections[ARDUINO_SocketID]);
+
+           
+  dataChannel_control = allPeerConnections[ARDUINO_SocketID].createDataChannel('data');
+  dataChannel_control.onopen = () => (data.disabled = false, data.select());
+  dataChannel_control.onmessage = (event)=>{console.log(event.data)}
+  
+  //starting speed 
+  var speed = 0;
+  
+  controllerPoll(dataChannel_control,speed);
+});

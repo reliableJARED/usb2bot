@@ -4,7 +4,7 @@
   "description": "usb connection of Arduino Leonardo to browser",
   "main": "index.js",
   "scripts": {
-	"start": "node index.js",
+	"start": "node index.js"
 		},
 
   "engines": {

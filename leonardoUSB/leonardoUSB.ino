@@ -63,7 +63,7 @@ void loop() {
   
   
   if (Serial && Serial.available()) {
-    //when data is sent, there are THREE ints
+    //when data is sent, there are TWO ints
     //see webUSB.html 
     motorSpeed[motorSpeedIndex++] = Serial.read();
 

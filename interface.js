@@ -345,33 +345,33 @@ window.addEventListener('beforeunload', function (e) {
 function learnFromMistakes(youFailed){
   console.log('so close, here is where it all went wrong:',youFailed)
 }
+
+
 /*
+There are two sections below, one for client with arduino leonardo connected by USB
+the other with a connected USB gamepad controller.
+there is nothing that ensures connection timing.  need to add that.  Also there is no flag
+or other indicator to the client if they are the arduino or the controller client.
+need to add those things.
 *
 *
 *
 *
 *
-ARDUINO LEONARDO CONNECTOR below
-*
-*
-*
+ARDUINO LEONARDO CLIENT below
 */
-
-
 
 (function() {
   'use strict';
+  /*
+  SEE: serial.js
+  that has the woker functions used to find and connect to the usb
+  */
 
   document.addEventListener('DOMContentLoaded', event => {
     let connectButton = document.querySelector("#connect");
     let statusDisplay = document.querySelector('#status');
-    let motorSpeed = document.querySelector('#motorSpeed');
-    //hide the connection button for now; unhide when controller is connected
-    connectButton.style.visibility = 'hidden';
-
     let port;
-    let dataChannel_arduino; //used for RTC data channel using the existing video channel
-
 
     function connectUSB() {
       port.connect().then(() => {
@@ -397,18 +397,8 @@ ARDUINO LEONARDO CONNECTOR below
         connectButton.textContent = 'Connect';
         statusDisplay.textContent = '';
         port = null;
-        /* ADD Data Channel CLose */
       } else {
         serial.requestPort().then(selectedPort => {
-         //console.log(allPeerConnections[ARDUINO_SocketID])
-          /*______________ DATA CHANNEL     
-          allPeerConnections[ARDUINO_SocketID].ondatachannel = e => {
-            dataChannel_arduino = e.channel;
-            dataChannel_arduino.onopen = () => log("Chat!");
-            dataChannel_arduino.onmessage = e => log("> " + e.data);
-            
-          };*/
- 
           port = selectedPort;
           
           connect();
@@ -428,16 +418,12 @@ ARDUINO LEONARDO CONNECTOR below
         connectUSB();
       }
     });
-
-    //Handle received data
+/**************TODO: using socket.on passes the data through the server.  changes this to RTCPeerconnection using data channel */
+//Handle received data
 socket.on('x',(id,data)=>{
-    //console.log(id);
-    //console.log(data);
+    //port is a direct USB connection to the arduino leonardo
     port.send(data);
   });
-
-
-
 
   });
 })();
@@ -446,7 +432,8 @@ socket.on('x',(id,data)=>{
 function controller(){
    
   let gamepad = navigator.getGamepads()[0];
-  //axes [left horz, left vert, right horz, right vert]
+  //Each joystick has output as [horizontal,verticle] using -1 to 1 scale
+  //gamepad.axes [left horz, left vert, right horz, right vert]
   //left axes forward is -1, backwards 1
   let change = gamepad.axes[1];
   return [-change];
@@ -461,8 +448,14 @@ function controller(){
   */
 }
 
+/*
+|
+|
+|
+CONTROLLER CLIENT
+*/
 
-function controllerPoll(dc,speed){
+function controllerPoll(speed){
   //set min max for the motor speed
   let maxSpeed = 255; 
   let minSpeed = 0;
@@ -492,11 +485,6 @@ function controllerPoll(dc,speed){
     //if we are in the range, check that speed isn't the same as it was previously
     if(speed != newSpeed){
 
-      //let gamepad = navigator.getGamepads()[0];
-      //console.log(gamepad);
-
-        //console.log('speed is changing: ', newSpeed);
-        
         //send update to the USB connected arduino leonardo
         let update = new Uint8Array(2);
         update[0] = newSpeed;
@@ -508,14 +496,7 @@ function controllerPoll(dc,speed){
 
         //send via socket to other connected computer
         socket.emit('x',ARDUINO_SocketID, update);
-        /*______________ DATA CHANNEL 
-        if (dc.readyState === "open"){
-          dc.send('test');
-        }
-        */
-
-
-        //port.send(update);
+       
       }
     }    
   
@@ -523,30 +504,21 @@ function controllerPoll(dc,speed){
   //LOOP
   //https://stackoverflow.com/questions/19893336/how-can-i-pass-argument-with-requestanimationframe
   window.requestAnimationFrame(() => {
-    controllerPoll(dc,newSpeed)
+    controllerPoll(newSpeed)
     });
   //requestAnimationFrame(controllerPoll(posX,posY)); -- THIS WONT WORK
 }
 
-var dataChannel_control;
+
 
 window.addEventListener("gamepadconnected", function(e){
  
   console.log('gamepad connected: %s',e.gamepad.id);
+  //hide the connection button this is only for the client with the Arduino connected
+  document.getElementById('connect').style.visibility = 'hidden';
 
-  //unhide the connect button to start the Arduino link and open the data channel
-  document.getElementById('connect').style.visibility = 'visible';
-
-  if(allPeerConnections[ARDUINO_SocketID]){    
-    /*______________ DATA CHANNEL     
-    dataChannel_control = allPeerConnections[ARDUINO_SocketID].createDataChannel('data');
-    dataChannel_control.onopen = () => (data.disabled = false, data.select());
-    dataChannel_control.onmessage = (event)=>{console.log(event.data)}
-    */
-  }
-  
   //starting speed 
   var speed = 0;
   
-  controllerPoll(dataChannel_control,speed);
+  controllerPoll(speed);
 });

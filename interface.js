@@ -398,10 +398,11 @@ ARDUINO LEONARDO CLIENT below
         statusDisplay.textContent = '';
         port = null;
       } else {
+        //connect to the USB arduino
         serial.requestPort().then(selectedPort => {
           port = selectedPort;
           
-          connect();
+          connectUSB();
 
         }).catch(error => {
           statusDisplay.textContent = error;
@@ -422,6 +423,7 @@ ARDUINO LEONARDO CLIENT below
 //Handle received data
 socket.on('x',(id,data)=>{
     //port is a direct USB connection to the arduino leonardo
+    console.log(data);
     port.send(data);
   });
 

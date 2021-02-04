@@ -431,8 +431,8 @@ ARDUINO LEONARDO CONNECTOR below
 
     //Handle received data
 socket.on('x',(id,data)=>{
-    console.log(id);
-    console.log(data);
+    //console.log(id);
+    //console.log(data);
     port.send(data);
   });
 

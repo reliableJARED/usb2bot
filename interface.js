@@ -440,7 +440,7 @@ function controller(){
   let motorSpeed = gamepad.axes[1];
   let pos = gamepad.axes[3];
   //-pos is to invert the input so 'up' on joystick is positive.
-  servoPos = -pos*(90)+90 //convert -1 to 1 input, to a 0 to 180 servo position
+  let servoPos = -pos*(90)+90 //convert -1 to 1 input, to a 0 to 180 servo position
   
   return [-motorSpeed, servoPos];//negative motorSpeedto invert so 'forward' on joy stick is Increase in int
   

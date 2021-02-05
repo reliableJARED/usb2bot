@@ -496,6 +496,8 @@ function controllerPoll(speed){
         //visual update of speed
         document.getElementById('motorSpeed').value = newSpeed;
 
+        console.log('sending speed update')
+
         //send via socket to other connected computer
         socket.emit('x',ARDUINO_SocketID, update);
        

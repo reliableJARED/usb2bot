@@ -476,7 +476,7 @@ function controllerPoll(speed, pos){
   newSpeed += userInput[0];
 
   //servo position
-  newPos = userInput[1];
+  let newPos = userInput[1];
 
   //fix speed in the event it has gone out of bounds
   if(newSpeed < minSpeed){

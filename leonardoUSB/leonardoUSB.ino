@@ -1,3 +1,5 @@
+#include <Servo.h>
+
 #include <WebUSB.h>
 
 /**
@@ -13,7 +15,7 @@
 
 
 /* 
-This is a test sketch for the Adafruit assembled Motor Shield for Arduino v2
+This sketch for the Adafruit assembled Motor Shield for Arduino v2
 It won't work with v1.x motor shields! Only for the v2's with built in PWM
 control
 
@@ -24,8 +26,10 @@ For use with the Adafruit Motor Shield v2
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 
+
+
 //the web link doesn't really matter
-WebUSB WebUSBSerial(1 /* https:// */, "webusb.github.io/arduino/demos/rgb");
+WebUSB WebUSBSerial(1 /* https:// */, "usb2bot.herokuapp.com");
 #define Serial WebUSBSerial
 
 
@@ -39,46 +43,57 @@ Adafruit_DCMotor *myMotor = AFMS.getMotor(1);
 // You can also make another motor on port M2
 //Adafruit_DCMotor *myOtherMotor = AFMS.getMotor(2);
 
+Servo myservo;  // create servo object to control a servo
 
-int motorSpeed[2]; //hold two ints from user, will be sent/received via serial
-int motorSpeedIndex;
+
+
+
+int data[2]; //hold two ints from user, will be sent/received via serial
+int dataIndex;
+int pos = 0;
 
 void setup() {
+  
+  myservo.attach(9);  // attaches the servo on pin 9 to the servo object (Servo position 2 on board)
+  
   while (!Serial) {
     ;
   }
   Serial.begin(9600);
   Serial.write("Sketch begins.\r\n");
-  Serial.println("Adafruit Motorshield v2 - DC Motor test!");
+  Serial.println("starting");
 
   AFMS.begin();  // create with the default frequency 1.6KHz
   //AFMS.begin(1000);  // OR with a different frequency, say 1KHz
   Serial.flush();
-  motorSpeedIndex = 0;
+  dataIndex = 0;
+  
 }
 
 void loop() {
+ 
   
   myMotor->run(FORWARD);
   
   
   if (Serial && Serial.available()) {
-    //when data is sent, there are TWO ints
+    //when data is sent, it comes in as an Array of int.  expecting for this two int
     //see webUSB.html 
-    motorSpeed[motorSpeedIndex++] = Serial.read();
+    data[dataIndex++] = Serial.read();//reads one byte at a time or -1 if no data
 
-    //motorSpeedIndex == 2 when new data has arrived
-    if (motorSpeedIndex == 2) {
-      myMotor->setSpeed(motorSpeed[0]);  
-      
+    //dataIndex == 2 when new data has arrived
+    if (dataIndex == 2) {
+       myMotor->setSpeed(data[0]);  
+       myservo.write(data[1]); 
+       
       Serial.print("Set motor to ");
-      Serial.print(motorSpeed[0]);
-      Serial.print(", a value received but not used ");
-      Serial.print(motorSpeed[1]);
+      Serial.print(data[0]);
+      Serial.print(", set servo position to ");
+      Serial.print(data[1]);
       Serial.flush();
       
       //reset
-      motorSpeedIndex = 0;
+      dataIndex = 0;
     }
   }
 }

@@ -380,7 +380,7 @@ ARDUINO LEONARDO CLIENT below
 
         port.onReceive = data => {
           let textDecoder = new TextDecoder();
-          console.log(textDecoder.decode(data));
+          //console.log(textDecoder.decode(data));
         }
         port.onReceiveError = error => {
           console.error(error);
@@ -423,7 +423,7 @@ ARDUINO LEONARDO CLIENT below
 //Handle received data
 socket.on('x',(id,data)=>{
     //port is a direct USB connection to the arduino leonardo
-    console.log(data);
+    //console.log(data);
     port.send(data);
   });
 
@@ -437,8 +437,12 @@ function controller(){
   //Each joystick has output as [horizontal,verticle] using -1 to 1 scale
   //gamepad.axes [left horz, left vert, right horz, right vert]
   //left axes forward is -1, backwards 1
-  let change = gamepad.axes[1];
-  return [-change];
+  let motorSpeed = gamepad.axes[1];
+  let pos = gamepad.axes[3];
+  //-pos is to invert the input so 'up' on joystick is positive.
+  servoPos = -pos*(90)+90 //convert -1 to 1 input, to a 0 to 180 servo position
+  
+  return [-motorSpeed, servoPos];//negative motorSpeedto invert so 'forward' on joy stick is Increase in int
   
   /*
   //PS Controller setup.  These are D-Pad buttons
@@ -457,7 +461,7 @@ function controller(){
 CONTROLLER CLIENT
 */
 
-function controllerPoll(speed){
+function controllerPoll(speed, pos){
   //set min max for the motor speed
   let maxSpeed = 255; 
   let minSpeed = 0;
@@ -471,6 +475,9 @@ function controllerPoll(speed){
   //userInput should be 0, 1 or -1
   newSpeed += userInput[0];
 
+  //servo position
+  newPos = userInput[1];
+
   //fix speed in the event it has gone out of bounds
   if(newSpeed < minSpeed){
     newSpeed = minSpeed;
@@ -481,22 +488,23 @@ function controllerPoll(speed){
 
 
 
+
   //cap the max and min to the motor speed range
   if(newSpeed <= maxSpeed && newSpeed  >= minSpeed){
 
-    //if we are in the range, check that speed isn't the same as it was previously
-    if(speed != newSpeed){
+    //if we are in the range, check that speed and servo position isn't the same as it was previously
+    if(speed != newSpeed || pos != newPos){
 
         //send update to the USB connected arduino leonardo
         let update = new Uint8Array(2);
-        update[0] = newSpeed;
-        update[1] = 0; //place holder for later use
+        update[0] = newSpeed;//motorspeed
+        update[1] = newPos; //servo
         //console.log(update[0])
 
         //visual update of speed
         document.getElementById('motorSpeed').value = newSpeed;
 
-        console.log('sending speed update')
+        //console.log('sending speed update')
 
         //send via socket to other connected computer
         socket.emit('x',ARDUINO_SocketID, update);
@@ -508,7 +516,7 @@ function controllerPoll(speed){
   //LOOP
   //https://stackoverflow.com/questions/19893336/how-can-i-pass-argument-with-requestanimationframe
   window.requestAnimationFrame(() => {
-    controllerPoll(newSpeed)
+    controllerPoll(newSpeed, newPos)
     });
   //requestAnimationFrame(controllerPoll(posX,posY)); -- THIS WONT WORK
 }
@@ -521,8 +529,9 @@ window.addEventListener("gamepadconnected", function(e){
   //hide the connection button this is only for the client with the Arduino connected
   document.getElementById('connect').style.visibility = 'hidden';
 
-  //starting speed 
+  //starting speed and servo position
   var speed = 0;
+  var pos = 0;
   
-  controllerPoll(speed);
+  controllerPoll(speed,pos);
 });

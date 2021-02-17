@@ -398,8 +398,8 @@ function stopLocalVideoIfArduino(){
 
         port.onReceive = data => {
           let textDecoder = new TextDecoder();
-          //log input from ARDUINO serial
-          //console.log(textDecoder.decode(data));
+          //log input from ARDUINO Serial.print()
+          console.log(textDecoder.decode(data));
         }
         port.onReceiveError = error => {
           console.error(error);

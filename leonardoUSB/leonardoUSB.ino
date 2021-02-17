@@ -96,11 +96,11 @@ void loop() {
        //myMotor->setSpeed(data[0]);  
        //panServo.write(data[1]); 
        
-      Serial.print("CASE: ");
-      Serial.print(data[0]);
-      Serial.print(", DATA ");
-      Serial.print(data[1]);
-      Serial.flush();
+      //Serial.print("CASE: ");
+      //Serial.print(data[0]);
+      //Serial.print(", DATA ");
+     // Serial.print(data[1]);
+      //Serial.flush();
       
       //////
       switch(data[0]){
@@ -166,18 +166,27 @@ void turn(int LR){
 
 //case: 4
 void forward_or_backward(int m){
+  Serial.print("forwardBackward arg: ");
+  Serial.print(m);
+  Serial.flush();
+
   //should the speed be set each call?  Or does setMotorPower() cover this?
   if(m == 1){
+      Serial.print("forward");
      //myMotor ->run(RELEASE);
      myMotor ->run(FORWARD);
      myMotor -> setSpeed(MOTOR_POWER);
   }
   if(m == 2){
+      Serial.print("backward");
+      Serial.flush();
       //myMotor ->run(RELEASE);
       myMotor ->run(BACKWARD);
       myMotor -> setSpeed(MOTOR_POWER);
   }
   if(m == 0){
+      Serial.print("stop");
+      Serial.flush();
       myMotor ->setSpeed(0);
       myMotor ->run(RELEASE);
   }
@@ -185,6 +194,7 @@ void forward_or_backward(int m){
 
 //case: 5
 void kill_all_motors(){
+        Serial.print("kill motor");
         myMotor ->setSpeed(0);
         myMotor ->run(RELEASE);
         mySteeringMotor ->setSpeed(0);

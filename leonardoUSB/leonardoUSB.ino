@@ -146,11 +146,14 @@ void pan(int pan){
 
 //case: 3
 void turn(int LR){
-  if(LR >0){
+  if(LR == 1){
      mySteeringMotor ->run(FORWARD);
+     mySteeringMotor ->setSpeed(TURN_POWER);
   }
-  if(LR < 0){
+  if(LR == 2){
       mySteeringMotor ->run(BACKWARD);
+      mySteeringMotor ->setSpeed(TURN_POWER);
+
   }
   if(LR == 0){
       mySteeringMotor ->setSpeed(0);
@@ -161,11 +164,11 @@ void turn(int LR){
 //case: 4
 void forward_or_backward(int m){
   //should the speed be set each call?  Or does setMotorPower() cover this?
-  if(m >0){
+  if(m ==1){
      myMotor ->run(FORWARD);
      myMotor -> setSpeed(MOTOR_POWER);
   }
-  if(m < 0){
+  if(m ==2){
       myMotor ->run(BACKWARD);
       myMotor -> setSpeed(MOTOR_POWER);
   }

@@ -462,7 +462,7 @@ function controller(){
     move = 1;
   }
   if(backwards == 1){
-    move = -1;
+    move = 2;
   }
    
 
@@ -472,7 +472,7 @@ function controller(){
     turn = 1;
   }
   if(steerInput < -0.15){
-    turn = -1;
+    turn = 2;
   }
   
 

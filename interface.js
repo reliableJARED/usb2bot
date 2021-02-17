@@ -473,6 +473,7 @@ function controller(){
 
   let move = 0;
   let turn = 0;
+  let power = 0;
 
 
   if(forward == 1){
@@ -487,12 +488,12 @@ function controller(){
   //simply the output, could force int but decided to do this way.
   if (motorPower > sensitvity){
     //correct inversion since 'down' on joystick is 1
-    motorPower = -1;
+    power = -1;
   }
   if(motorPower < -sensitvity){
     //correct inversion since 'up' on joystick is -1
-    motorPower = 1;
-  }else{motorPower = 0;}
+    power = 1;
+  }
   
   //determine if Left or Right
   if (steerInput > sensitvity){
@@ -508,7 +509,7 @@ function controller(){
   let tilt = posV*(90)+90; //convert -1 to 1 input, to a 0 to 180 servo position
   let pan = -posH*(90)+90;
   
-  return [motorPower, tilt,pan,turn,move,stop];
+  return [power, tilt,pan,turn,move,stop];
 
 }
 

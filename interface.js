@@ -454,7 +454,7 @@ socket.on('x',(id,data)=>{
 function controller(){
    
   let gamepad = navigator.getGamepads()[0];
-  let sensitvity = 0.4;//min threshold on axes to register as input
+  let sensitvity = 0.5;//min threshold on axes to register as input
   //Each joystick has output as [horizontal,verticle] using -1 to 1 scale
   //gamepad.axes [left horz, left vert, right horz, right vert]
   //left/right axes forward is -1, backwards 1, left is -1, right is 1
@@ -492,7 +492,7 @@ function controller(){
   if(motorPower < -sensitvity){
     //correct inversion since 'up' on joystick is -1
     motorPower = 1;
-  }
+  }else{motorPower = 0;}
   
   //determine if Left or Right
   if (steerInput > sensitvity){

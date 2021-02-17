@@ -119,6 +119,9 @@ void loop() {
         case 4:
           forward_or_backward(data[1]);
           break;
+        case 5:
+          kill_all_motors();
+          break;
        
       }
       //reset
@@ -165,12 +168,12 @@ void turn(int LR){
 void forward_or_backward(int m){
   //should the speed be set each call?  Or does setMotorPower() cover this?
   if(m == 1){
-     myMotor ->run(RELEASE);
+     //myMotor ->run(RELEASE);
      myMotor ->run(FORWARD);
      myMotor -> setSpeed(MOTOR_POWER);
   }
   if(m == 2){
-      myMotor ->run(RELEASE);
+      //myMotor ->run(RELEASE);
       myMotor ->run(BACKWARD);
       myMotor -> setSpeed(MOTOR_POWER);
   }
@@ -179,3 +182,11 @@ void forward_or_backward(int m){
       myMotor ->run(RELEASE);
   }
 };
+
+//case: 5
+void kill_all_motors(){
+        myMotor ->setSpeed(0);
+        myMotor ->run(RELEASE);
+        mySteeringMotor ->setSpeed(0);
+        mySteeringMotor ->run(RELEASE);
+}

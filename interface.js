@@ -361,6 +361,23 @@ need to add those things.
 ARDUINO LEONARDO CLIENT below
 */
 
+function stopLocalVideoIfArduino(){
+  navigator.usb.getDevices()
+  .then(devices =>{
+    devices.forEach(device =>{
+      if(device.manufacturerName == "Arduino LLC"){
+        //playing the video really bogs down the pi.
+        var videoElement = document.getElementById('localVideo');
+        videoElement.pause();
+        videoElement.autoplay = false;
+        videoElement.removeAttribute('src'); // empty source
+        videoElement.load();
+      }
+    })
+  }
+  )
+}
+
 (function() {
   'use strict';
   /*
@@ -377,6 +394,7 @@ ARDUINO LEONARDO CLIENT below
       port.connect().then(() => {
         statusDisplay.textContent = '';
         connectButton.textContent = 'Disconnect';
+        stopLocalVideoIfArduino();
 
         port.onReceive = data => {
           let textDecoder = new TextDecoder();
@@ -448,17 +466,12 @@ function controller(){
   let posH = axes[2];
   let forward = gamepad.buttons[7].value;//right trigger
   let backwards = gamepad.buttons[1].value;//circle
+  let stop = gamepad.buttons[0].value;//x
+
   let move = 0;
   let turn = 0;
 
-  //determine if should go forward or backward
-  if(forward == 0 && backwards == 0){
-    move = 0;
-  }
-  //can't go back and forward at same time
-  if(forward == 1 && backwards == 1){
-    move = 0;
-  }
+
   if(forward == 1){
     move = 1;
   }
@@ -481,7 +494,7 @@ function controller(){
   let tilt = posV*(90)+90; //convert -1 to 1 input, to a 0 to 180 servo position
   let pan = -posH*(90)+90;
   
-  return [-motorPower, tilt,pan,turn,move];//negative motorSpeedto invert so 'forward' on joy stick is Increase in int
+  return [-motorPower, tilt,pan,turn,move,stop];//negative motorSpeedto invert so 'forward' on joy stick is Increase in int
 
 }
 
@@ -510,9 +523,21 @@ function controllerPoll(speed, tilt,pan,turn,move){
   let panUpdate = 2;
   let turnUpdate = 3
   let moveUpdate = 4;
+  let stopMotor = 5;
 
   //used to send update to the USB connected arduino leonardo
   let update = new Uint8Array(2);
+
+    //first check if User is trying to stop all motors
+  if(userInput[5] == 1){
+      console.log('sending full stop');
+      update[0] = stopMotor;
+      update[1] = userInput[5];
+      //visual update of speed
+      document.getElementById('motorSpeed').value = 0;
+      //send via socket to other connected computer
+      socket.emit('x',ARDUINO_SocketID, update);
+    }
 
   //update the POWER from user input. 
   //userInput should be 0, 1 or -1
@@ -596,7 +621,6 @@ window.addEventListener("gamepadconnected", function(e){
   let pan = 0;
   let turn = 0;
   let move = 0;
-
   
   controllerPoll(speed,tilt,pan,turn,move);
 });

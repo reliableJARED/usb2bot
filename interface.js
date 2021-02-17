@@ -436,13 +436,51 @@ function controller(){
   let gamepad = navigator.getGamepads()[0];
   //Each joystick has output as [horizontal,verticle] using -1 to 1 scale
   //gamepad.axes [left horz, left vert, right horz, right vert]
-  //left axes forward is -1, backwards 1
-  let motorSpeed = gamepad.axes[1];
-  let pos = gamepad.axes[3];
-  //-pos is to invert the input so 'up' on joystick is positive.
-  let servoPos = -pos*(90)+90 //convert -1 to 1 input, to a 0 to 180 servo position
+  //left/right axes forward is -1, backwards 1, left is -1, right is 1
+  //TEST output
+  //https://gamepad-tester.com/
+  let axes = gamepad.axes;
+
+  let motorPower = axes[1];//consider making this dpad
+  let steerInput = axes[0];
+  let posV = axes[3];
+  let posH = axes[2];
+  let forward = gamepad.buttons[7].value;//right trigger
+  let backwards = gamepad.buttons[1].value;//circle
+  let move = 0;
+  let turn = 0;
+
+  //determine if should go forward or backward
+  if(forward == 0 && backwards == 0){
+    move = 0;
+  }
+  //can't go back and forward at same time
+  if(forward == 1 && backwards == 1){
+    move = 0;
+  }
+  if(forward == 1){
+    move = 1;
+  }
+  if(backwards == 1){
+    move = -1;
+  }
+   
+
+  //determine Left or Right
+  if (steerInput > 0.15){
+    //use 0.15 because controller isn't perfect calibraion always
+    turn = 1;
+  }
+  if(steerInput < -0.15){
+    turn = -1;
+  }
   
-  return [-motorSpeed, servoPos];//negative motorSpeedto invert so 'forward' on joy stick is Increase in int
+
+  //-pos is to invert the input so 'up' on joystick is positive.
+  let tilt = -posV*(90)+90; //convert -1 to 1 input, to a 0 to 180 servo position
+  let pan = posH*(90)+90;
+  
+  return [-motorPower, tilt,pan,turn,move];//negative motorSpeedto invert so 'forward' on joy stick is Increase in int
   
   /*
   //PS Controller setup.  These are D-Pad buttons
@@ -461,62 +499,92 @@ function controller(){
 CONTROLLER CLIENT
 */
 
-function controllerPoll(speed, pos){
+function controllerPoll(speed, tilt,pan,turn,move){
+  
   //set min max for the motor speed
   let maxSpeed = 255; 
   let minSpeed = 0;
   let newSpeed = speed;
 
-  //console.log('current speed: ', speed);
   //poll controller state
   let userInput = controller();
+  //userInput return value = [-motorPower, tilt,pan,turn,move]
 
-  //update the speed from user input. 
+  //Arduino case assignments for incoming data
+  //0=motorPower, 1=tilt, 2=pan, 3=turn, 4=forward/backward
+  let motorPowerUpdate =0;
+  let tiltUpdate = 1;
+  let panUpdate = 2;
+  let turnUpdate = 3
+  let moveUpdate = 4;
+
+  //used to send update to the USB connected arduino leonardo
+  let update = new Uint8Array(2);
+
+  //update the POWER from user input. 
   //userInput should be 0, 1 or -1
   newSpeed += userInput[0];
-
-  //servo position
-  let newPos = userInput[1];
-
-  //fix speed in the event it has gone out of bounds
+  //protect speed in the event it has gone out of bounds
   if(newSpeed < minSpeed){
-    newSpeed = minSpeed;
-  }
+      newSpeed = minSpeed;
+    }
   if(newSpeed > maxSpeed){
-    newSpeed = maxSpeed;
+      newSpeed = maxSpeed;
+    }
+
+  //we don't want to send the same update, only new updates
+  //use these 'new' assignments to compare the last update
+
+  //servo positions
+  let newTilt = userInput[1];
+  let newPan = userInput[2];
+
+  //direction and speed
+  let newTurn = userInput[3];
+  let newMove = userInput[4];
+
+  if(speed != newSpeed){
+      //cap the max and min to the motor speed range
+    if(newSpeed <= maxSpeed && newSpeed  >= minSpeed){ 
+      update[0] = motorPowerUpdate;
+      update[1] = newSpeed;
+      //visual update of speed
+      document.getElementById('motorSpeed').value = newSpeed;
+      //send via socket to other connected computer
+      socket.emit('x',ARDUINO_SocketID, update);
+       
+    }
   }
 
+  if(newTilt != tilt){
+    update[0] = tiltUpdate;
+    update[1]= newTilt;
+    socket.emit('x',ARDUINO_SocketID, update);
 
+  }
 
-
-  //cap the max and min to the motor speed range
-  if(newSpeed <= maxSpeed && newSpeed  >= minSpeed){
-
-    //if we are in the range, check that speed and servo position isn't the same as it was previously
-    if(speed != newSpeed || pos != newPos){
-
-        //send update to the USB connected arduino leonardo
-        let update = new Uint8Array(2);
-        update[0] = newSpeed;//motorspeed
-        update[1] = newPos; //servo
-        //console.log(update[0])
-
-        //visual update of speed
-        document.getElementById('motorSpeed').value = newSpeed;
-
-        //console.log('sending speed update')
-
-        //send via socket to other connected computer
-        socket.emit('x',ARDUINO_SocketID, update);
-       
-      }
-    }    
+  if(newPan != pan){
+    update[0] = panUpdate;
+    update[1]= newPan;
+    socket.emit('x',ARDUINO_SocketID, update);
+  }
+  
+  if(newTurn != turn){
+    update[0] = turnUpdate;
+    update[1]= newTurn;
+    socket.emit('x',ARDUINO_SocketID, update);
+  }
+  if(newMove != move){
+    update[0] = moveUpdate;
+    update[1]= newMove;
+    socket.emit('x',ARDUINO_SocketID, update);
+  }
   
 
   //LOOP
   //https://stackoverflow.com/questions/19893336/how-can-i-pass-argument-with-requestanimationframe
   window.requestAnimationFrame(() => {
-    controllerPoll(newSpeed, newPos)
+    controllerPoll(newSpeed, newTilt,newPan,newTurn,newMove)
     });
   //requestAnimationFrame(controllerPoll(posX,posY)); -- THIS WONT WORK
 }
@@ -529,9 +597,13 @@ window.addEventListener("gamepadconnected", function(e){
   //hide the connection button this is only for the client with the Arduino connected
   document.getElementById('connect').style.visibility = 'hidden';
 
-  //starting speed and servo position
-  var speed = 0;
-  var pos = 0;
+  //starting settings
+  let speed = 0;
+  let tilt = 0;
+  let pan = 0;
+  let turn = 0;
+  let move = 0;
+
   
-  controllerPoll(speed,pos);
+  controllerPoll(speed,tilt,pan,turn,move);
 });

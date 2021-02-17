@@ -40,10 +40,13 @@ Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 
 // Select which 'port' M1, M2, M3 or M4. In this case, M1
 Adafruit_DCMotor *myMotor = AFMS.getMotor(1);
+Adafruit_DCMotor *mySteeringMotor = AFMS.getMotor(2);
+
 // You can also make another motor on port M2
 //Adafruit_DCMotor *myOtherMotor = AFMS.getMotor(2);
 
-Servo myservo;  // create servo object to control a servo
+Servo panServo;  // create servo object to control a servo
+Servo tiltServo;
 
 
 
@@ -51,10 +54,17 @@ Servo myservo;  // create servo object to control a servo
 int data[2]; //hold two ints from user, will be sent/received via serial
 int dataIndex;
 int pos = 0;
+int TURN_POWER = 200;
+int MOTOR_POWER =0;
 
 void setup() {
   
-  myservo.attach(9);  // attaches the servo on pin 9 to the servo object (Servo position 2 on board)
+  panServo.attach(9);  // attaches the servo on pin 9 to the servo object (Servo position 2 on board)
+  tiltServo.attach(10);
+
+  //set turning power of steering motor
+  mySteeringMotor ->setSpeed(TURN_POWER);
+
   
   while (!Serial) {
     ;
@@ -83,17 +93,84 @@ void loop() {
 
     //dataIndex == 2 when new data has arrived
     if (dataIndex == 2) {
-       myMotor->setSpeed(data[0]);  
-       myservo.write(data[1]); 
+       //myMotor->setSpeed(data[0]);  
+       //panServo.write(data[1]); 
        
-      Serial.print("Set motor to ");
+      Serial.print("CASE: ");
       Serial.print(data[0]);
-      Serial.print(", set servo position to ");
+      Serial.print(", DATA ");
       Serial.print(data[1]);
       Serial.flush();
       
+      //////
+      switch(data[0]){
+        case 0:
+          setMotorPower(data[1]);
+          break;
+        case 1:
+          tilt(data[1]);
+          break;
+        case 2:
+          pan(data[1]);
+          break;
+        case 3:
+          turn(data[1]);
+          break;
+        case 4:
+          forward_or_backward(data[1]);
+          break;
+       
+      }
       //reset
       dataIndex = 0;
     }
   }
 }
+
+
+//case: 0
+void setMotorPower(int power){
+  MOTOR_POWER = power; 
+  myMotor -> setSpeed(power);
+}
+
+//case: 1
+void tilt(int tilt){
+  tiltServo.write(tilt); 
+}
+
+//case: 2
+void pan(int pan){
+  panServo.write(pan); 
+}
+
+//case: 3
+void turn(int LR){
+  if(LR >0){
+     mySteeringMotor ->run(FORWARD);
+  }
+  if(LR < 0){
+      mySteeringMotor ->run(BACKWARD);
+  }
+  if(LR == 0){
+      mySteeringMotor ->setSpeed(0);
+      mySteeringMotor ->run(RELEASE);
+  }
+}
+
+//case: 4
+void forward_or_backward(int m){
+  //should the speed be set each call?  Or does setMotorPower() cover this?
+  if(m >0){
+     myMotor ->run(FORWARD);
+     myMotor -> setSpeed(MOTOR_POWER);
+  }
+  if(m < 0){
+      myMotor ->run(BACKWARD);
+      myMotor -> setSpeed(MOTOR_POWER);
+  }
+  if(m == 0){
+      myMotor ->setSpeed(0);
+      myMotor ->run(RELEASE);
+  }
+};

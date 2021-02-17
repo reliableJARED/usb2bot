@@ -49,8 +49,6 @@ Servo panServo;  // create servo object to control a servo
 Servo tiltServo;
 
 
-
-
 int data[2]; //hold two ints from user, will be sent/received via serial
 int dataIndex;
 int pos = 0;
@@ -93,9 +91,6 @@ void loop() {
 
     //dataIndex == 2 when new data has arrived
     if (dataIndex == 2) {
-       //myMotor->setSpeed(data[0]);  
-       //panServo.write(data[1]); 
-       
       //Serial.print("CASE: ");
       //Serial.print(data[0]);
       //Serial.print(", DATA ");
@@ -104,6 +99,9 @@ void loop() {
       
       //////
       switch(data[0]){
+        case 5:
+          kill_all_motors();
+          break;
         case 0:
           setMotorPower(data[1]);
           break;
@@ -119,9 +117,7 @@ void loop() {
         case 4:
           forward_or_backward(data[1]);
           break;
-        case 5:
-          kill_all_motors();
-          break;
+        
        
       }
       //reset
@@ -133,9 +129,9 @@ void loop() {
 
 //case: 0
 void setMotorPower(int power){
-  Serial.print("set motor power: ");
-  Serial.print(power);
-  Serial.flush();
+  //Serial.print("set motor power: ");
+  //Serial.print(power);
+  //Serial.flush();
   MOTOR_POWER = power; 
   myMotor -> setSpeed(power);
 }
@@ -179,19 +175,19 @@ void forward_or_backward(int m){
       Serial.flush();
      //myMotor ->run(RELEASE);
      myMotor -> run(FORWARD);
-     //myMotor -> setSpeed(MOTOR_POWER);
+     myMotor -> setSpeed(MOTOR_POWER);
   }
   if(m == 2){
       Serial.print("backward");
       Serial.flush();
       //myMotor ->run(RELEASE);
       myMotor -> run(BACKWARD);
-      //myMotor -> setSpeed(MOTOR_POWER);
+      myMotor -> setSpeed(MOTOR_POWER);
   }
   if(m == 0){
       Serial.print("stop");
       Serial.flush();
-      //myMotor ->setSpeed(0);
+      myMotor ->setSpeed(0);
       myMotor ->run(RELEASE);
   }
 };

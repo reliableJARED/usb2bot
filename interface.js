@@ -371,6 +371,7 @@ function stopLocalVideoIfArduino(){
         videoElement.pause();
         videoElement.autoplay = false;
         videoElement.removeAttribute('src'); // empty source
+        videoElement.display = none;
         videoElement.load();
       }
     })
@@ -453,12 +454,14 @@ socket.on('x',(id,data)=>{
 function controller(){
    
   let gamepad = navigator.getGamepads()[0];
+  let sensitvity = 0.4;//min threshold on axes to register as input
   //Each joystick has output as [horizontal,verticle] using -1 to 1 scale
   //gamepad.axes [left horz, left vert, right horz, right vert]
   //left/right axes forward is -1, backwards 1, left is -1, right is 1
   //TEST output
   //https://gamepad-tester.com/
   let axes = gamepad.axes;
+
 
   let motorPower = axes[1];//consider making this dpad
   let steerInput = axes[0];
@@ -480,21 +483,32 @@ function controller(){
   }
    
 
-  //determine Left or Right
-  if (steerInput > 0.15){
+  //determine motor speed up or down
+  //simply the output, could force int but decided to do this way.
+  if (motorPower > sensitvity){
+    //correct inversion since 'down' on joystick is 1
+    motorPower = -1;
+  }
+  if(motorPower < -sensitvity){
+    //correct inversion since 'up' on joystick is -1
+    motorPower = 1;
+  }
+  
+  //determine if Left or Right
+  if (steerInput > sensitvity){
     //use 0.15 because controller isn't perfect calibraion always
     turn = 1;
   }
-  if(steerInput < -0.15){
+  if(steerInput < -sensitvity){
     turn = 2;
   }
-  
+
 
   //-pos is to invert the input so 'up' on joystick is positive.
   let tilt = posV*(90)+90; //convert -1 to 1 input, to a 0 to 180 servo position
   let pan = -posH*(90)+90;
   
-  return [-motorPower, tilt,pan,turn,move,stop];//negative motorSpeedto invert so 'forward' on joy stick is Increase in int
+  return [motorPower, tilt,pan,turn,move,stop];
 
 }
 
@@ -518,30 +532,33 @@ function controllerPoll(speed, tilt,pan,turn,move){
 
   //Arduino case assignments for incoming data
   //0=motorPower, 1=tilt, 2=pan, 3=turn, 4=forward/backward
-  let motorPowerUpdate =0;
+  let motorPowerUpdate = 0;
   let tiltUpdate = 1;
   let panUpdate = 2;
   let turnUpdate = 3
   let moveUpdate = 4;
   let stopMotor = 5;
 
+  //update the POWER from user input. 
+  //userInput should be 0, 1 or -1
+  newSpeed += userInput[0];
+
   //used to send update to the USB connected arduino leonardo
   let update = new Uint8Array(2);
 
     //first check if User is trying to stop all motors
   if(userInput[5] == 1){
+      newSpeed = 0;
       console.log('sending full stop');
       update[0] = stopMotor;
       update[1] = userInput[5];
       //visual update of speed
-      document.getElementById('motorSpeed').value = '0';
+      document.getElementById('motorSpeed').value = newSpeed;
       //send via socket to other connected computer
       socket.emit('x',ARDUINO_SocketID, update);
     }
 
-  //update the POWER from user input. 
-  //userInput should be 0, 1 or -1
-  newSpeed += userInput[0];
+  
   //protect speed in the event it has gone out of bounds
   if(newSpeed < minSpeed){
       newSpeed = minSpeed;

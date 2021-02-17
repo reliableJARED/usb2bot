@@ -173,15 +173,16 @@ void forward_or_backward(int m){
   //should the speed be set each call?  Or does setMotorPower() cover this?
   if(m == 1){
       Serial.print("forward");
+      Serial.flush();
      //myMotor ->run(RELEASE);
-     myMotor ->run(FORWARD);
+     myMotor -> run(FORWARD);
      myMotor -> setSpeed(MOTOR_POWER);
   }
   if(m == 2){
       Serial.print("backward");
       Serial.flush();
       //myMotor ->run(RELEASE);
-      myMotor ->run(BACKWARD);
+      myMotor -> run(BACKWARD);
       myMotor -> setSpeed(MOTOR_POWER);
   }
   if(m == 0){
@@ -194,9 +195,10 @@ void forward_or_backward(int m){
 
 //case: 5
 void kill_all_motors(){
+        MOTOR_POWER = 0; 
         Serial.print("kill motor");
         myMotor ->setSpeed(0);
         myMotor ->run(RELEASE);
-        mySteeringMotor ->setSpeed(0);
+        //mySteeringMotor ->setSpeed(0);
         mySteeringMotor ->run(RELEASE);
 }

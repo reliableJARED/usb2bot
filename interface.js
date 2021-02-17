@@ -534,7 +534,7 @@ function controllerPoll(speed, tilt,pan,turn,move){
       update[0] = stopMotor;
       update[1] = userInput[5];
       //visual update of speed
-      document.getElementById('motorSpeed').value = 0;
+      document.getElementById('motorSpeed').value = '0';
       //send via socket to other connected computer
       socket.emit('x',ARDUINO_SocketID, update);
     }

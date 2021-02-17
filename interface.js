@@ -562,6 +562,7 @@ function controllerPoll(speed, tilt,pan,turn,move){
   let newMove = userInput[4];
 
   if(speed != newSpeed){
+    console.log("speed,newspeed: " ,speed,newSpeed)
       //cap the max and min to the motor speed range
     if(newSpeed <= maxSpeed && newSpeed  >= minSpeed){ 
       update[0] = motorPowerUpdate;

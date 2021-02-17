@@ -133,6 +133,9 @@ void loop() {
 
 //case: 0
 void setMotorPower(int power){
+  Serial.print("set motor power: ");
+  Serial.print(power);
+  Serial.flush();
   MOTOR_POWER = power; 
   myMotor -> setSpeed(power);
 }
@@ -176,19 +179,19 @@ void forward_or_backward(int m){
       Serial.flush();
      //myMotor ->run(RELEASE);
      myMotor -> run(FORWARD);
-     myMotor -> setSpeed(MOTOR_POWER);
+     //myMotor -> setSpeed(MOTOR_POWER);
   }
   if(m == 2){
       Serial.print("backward");
       Serial.flush();
       //myMotor ->run(RELEASE);
       myMotor -> run(BACKWARD);
-      myMotor -> setSpeed(MOTOR_POWER);
+      //myMotor -> setSpeed(MOTOR_POWER);
   }
   if(m == 0){
       Serial.print("stop");
       Serial.flush();
-      myMotor ->setSpeed(0);
+      //myMotor ->setSpeed(0);
       myMotor ->run(RELEASE);
   }
 };
@@ -197,7 +200,7 @@ void forward_or_backward(int m){
 void kill_all_motors(){
         MOTOR_POWER = 0; 
         Serial.print("kill motor");
-        myMotor ->setSpeed(0);
+        //myMotor ->setSpeed(0);
         myMotor ->run(RELEASE);
         //mySteeringMotor ->setSpeed(0);
         mySteeringMotor ->run(RELEASE);

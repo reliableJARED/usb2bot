@@ -380,7 +380,7 @@ ARDUINO LEONARDO CLIENT below
 
         port.onReceive = data => {
           let textDecoder = new TextDecoder();
-          //console.log(textDecoder.decode(data));
+          console.log(textDecoder.decode(data));
         }
         port.onReceiveError = error => {
           console.error(error);
@@ -477,19 +477,11 @@ function controller(){
   
 
   //-pos is to invert the input so 'up' on joystick is positive.
-  let tilt = -posV*(90)+90; //convert -1 to 1 input, to a 0 to 180 servo position
-  let pan = posH*(90)+90;
+  let tilt = posV*(90)+90; //convert -1 to 1 input, to a 0 to 180 servo position
+  let pan = -posH*(90)+90;
   
   return [-motorPower, tilt,pan,turn,move];//negative motorSpeedto invert so 'forward' on joy stick is Increase in int
-  
-  /*
-  //PS Controller setup.  These are D-Pad buttons
-  //let left = -gamepad.buttons[14].value;
-  //let right = gamepad.buttons[15].value;
-  let down = -gamepad.buttons[13].value;
-  let up = gamepad.buttons[12].value;
-  return [up+down]
-  */
+
 }
 
 /*

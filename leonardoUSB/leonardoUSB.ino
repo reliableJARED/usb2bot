@@ -164,11 +164,13 @@ void turn(int LR){
 //case: 4
 void forward_or_backward(int m){
   //should the speed be set each call?  Or does setMotorPower() cover this?
-  if(m ==1){
+  if(m == 1){
+     myMotor ->run(RELEASE);
      myMotor ->run(FORWARD);
      myMotor -> setSpeed(MOTOR_POWER);
   }
-  if(m ==2){
+  if(m == 2){
+      myMotor ->run(RELEASE);
       myMotor ->run(BACKWARD);
       myMotor -> setSpeed(MOTOR_POWER);
   }

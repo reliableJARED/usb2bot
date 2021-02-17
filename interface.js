@@ -371,7 +371,6 @@ function stopLocalVideoIfArduino(){
         videoElement.pause();
         videoElement.autoplay = false;
         videoElement.removeAttribute('src'); // empty source
-        videoElement.display = none;
         videoElement.load();
       }
     })

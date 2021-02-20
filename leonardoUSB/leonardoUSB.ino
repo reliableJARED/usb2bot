@@ -49,11 +49,24 @@ Servo panServo;  // create servo object to control a servo
 Servo tiltServo;
 
 
-int data[2]; //hold two ints from user, will be sent/received via serial
+int data[7]; //hold two ints from user, will be sent/received via serial
 int dataIndex;
 int pos = 0;
 int TURN_POWER = 200;
-int MOTOR_POWER =0;
+int MOTOR_POWER = 0;
+int PAN_ANGLE = 90;
+int TILT_ANGLE = 90;
+int RIGHT_TURN = 1;
+int LEFT_TURN = 2;
+int STRAIGHT_WHEELS = 0;
+int TURN_STATE = 0;
+int MOVE_FORWARD = 1;
+int MOVE_BACKWARD = 2;
+int MOVE_STOP = 0;
+int MOVE_STATE = 0;
+int ControllerUpdateRequest = 999;
+int header_controllerUpdate = 555;
+bool CONNECTION_STARTED = false;
 
 void setup() {
   
@@ -62,6 +75,7 @@ void setup() {
 
   //set turning power of steering motor
   mySteeringMotor ->setSpeed(TURN_POWER);
+  myMotor -> setSpeed(MOTOR_POWER);
 
   
   while (!Serial) {
@@ -79,25 +93,39 @@ void setup() {
 }
 
 void loop() {
- 
-  
-  myMotor->run(FORWARD);
-  
   
   if (Serial && Serial.available()) {
-    //when data is sent, it comes in as an Array of int.  expecting for this two int
-    //see webUSB.html 
+    
+    //continue polling until first receipt of controller info
+    if(!CONNECTION_STARTED){
+        Serial.print(ControllerUpdateRequest);
+        };
+    
+    //when data is sent, it comes in as an Array of int.  
     data[dataIndex++] = Serial.read();//reads one byte at a time or -1 if no data
 
-    //dataIndex == 2 when new data has arrived
-    if (dataIndex == 2) {
-      //Serial.print("CASE: ");
-      //Serial.print(data[0]);
-      //Serial.print(", DATA ");
-     // Serial.print(data[1]);
-      //Serial.flush();
-      
-      //////
+    //dataIndex == 7 when all of the new data has arrived
+    if (dataIndex == 7) {
+
+        if(data[0] == header_controllerUpdate){
+          //555 is the header indicator, it should be index 0.  that means data form is correct
+          //data form: [header, power, tilt,pan,turn,move,stop];
+          //motor power
+          if(data[1] != MOTOR_POWER){setMotorPower(data[1]);};
+          //tilt
+          if(data[2] != TILT_ANGLE){tilt(data[2]);};
+          //pan
+          if(data[3] != PAN_ANGLE){pan(data[3]);};
+          //turn wheels
+          if(data[4] != TURN_STATE){turn(data[4]);};
+          //move forward/backwards
+          if(data[5] != MOVE_STATE){forward_or_backward(data[5]);};
+
+          //only used on first connection, indicate connection made
+           CONNECTION_STARTED = true;
+        }
+  
+      /*/////
       switch(data[0]){
         case 5:
           kill_all_motors();
@@ -120,8 +148,11 @@ void loop() {
         
        
       }
+      */
       //reset
       dataIndex = 0;
+      //request new update from controller
+      Serial.print(ControllerUpdateRequest);
     }
   }
 }
@@ -138,28 +169,37 @@ void setMotorPower(int power){
 
 //case: 1
 void tilt(int tilt){
+  TILT_ANGLE = tilt;
   tiltServo.write(tilt); 
 }
 
 //case: 2
 void pan(int pan){
+  PAN_ANGLE = pan;
   panServo.write(pan); 
 }
 
 //case: 3
 void turn(int LR){
-  if(LR == 1){
+  
+  //right turn
+  if(LR == RIGHT_TURN){
      mySteeringMotor ->run(FORWARD);
      mySteeringMotor ->setSpeed(TURN_POWER);
+     TURN_STATE = RIGHT_TURN;
   }
-  if(LR == 2){
+  //left turn
+  if(LR == LEFT_TURN){
       mySteeringMotor ->run(BACKWARD);
       mySteeringMotor ->setSpeed(TURN_POWER);
+      TURN_STATE = LEFT_TURN;
 
   }
-  if(LR == 0){
+  //straight wheels
+  if(LR == STRAIGHT_WHEELS){
       mySteeringMotor ->setSpeed(0);
       mySteeringMotor ->run(RELEASE);
+      TURN_STATE = STRAIGHT_WHEELS;
   }
 }
 
@@ -170,25 +210,28 @@ void forward_or_backward(int m){
   Serial.flush();
 
   //should the speed be set each call?  Or does setMotorPower() cover this?
-  if(m == 1){
+  if(m == MOVE_FORWARD){
       Serial.print("forward");
       Serial.flush();
-     //myMotor ->run(RELEASE);
+     
      myMotor -> run(FORWARD);
      myMotor -> setSpeed(MOTOR_POWER);
+     MOVE_STATE = MOVE_FORWARD;
   }
-  if(m == 2){
+  if(m == MOVE_BACKWARD){
       Serial.print("backward");
       Serial.flush();
-      //myMotor ->run(RELEASE);
+     
       myMotor -> run(BACKWARD);
       myMotor -> setSpeed(MOTOR_POWER);
+      MOVE_STATE = MOVE_BACKWARD;
   }
-  if(m == 0){
+  if(m == MOVE_STOP){
       Serial.print("stop");
       Serial.flush();
       myMotor ->setSpeed(0);
       myMotor ->run(RELEASE);
+      MOVE_STATE = MOVE_STOP;
   }
 };
 

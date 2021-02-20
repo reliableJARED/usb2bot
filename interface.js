@@ -31,6 +31,53 @@ https://shanetully.com/2014/09/a-dead-simple-webrtc-example/
 let room = null;
 var socket = io.connect();
 var ARDUINO_SocketID = false; //SET IN ANSWER
+var ARDUINO_CONNECTED_CLIENT = false;
+var PREVIOUS_CONTROLLER_STATE = (()=>{
+  let maxSpeed = 255; 
+  let minSpeed = 0;
+  let oldMotorPowerState = 0;
+  let oldTurnState = 0;
+  let oldMoveState = 0;
+  let oldPanState = 0;
+  let oldTiltState = 0;
+  let oldStopState = 0;
+  return{set:function(state){
+        //state value: [power, tilt,pan,turn,move,stop];
+        //make sure that we don't set power to be less than 0 or more than 255.
+        oldMotorPowerState += (state.power<0 || state.power>255) ? state.power: 0;
+        oldTiltState = state.tilt;
+        oldPanState = state.pan;
+        oldTurnState = state.turn;
+        oldMoveState = state.move;
+        oldStopState = state.stop;
+        },
+        stateChanged:function(state){
+          //if anything in state is different than the old state, send false
+          if(state.power == oldMoveState && 
+            state.tilt == oldTiltState &&
+            state.pan == oldPanState &&
+            state.turn == oldTurnState &&
+            state.move == oldMoveState &&
+            state.stop == oldStopState){ 
+              return false
+          }
+          else{return true}
+
+        },
+        get:function(){
+          return {
+            power :oldMoveState, 
+            tilt : oldTiltState,
+            pan : oldPanState,
+            turn : oldTurnState,
+            move : oldMoveState,
+            stop : oldStopState 
+          }
+        },
+        
+    }
+
+})();
 
 
 
@@ -236,7 +283,6 @@ socket.on("offer", (id, description) => {
    (stream)=>{
      stream.getTracks().forEach(track => remotePeerConnection.addTrack(track, stream));
 
-
      return remotePeerConnection
    })
    .then(remotePeerConnection.setRemoteDescription(description))
@@ -249,8 +295,15 @@ socket.on("offer", (id, description) => {
     //trying to fix issue with iphone, mannually add tracks to a MediaSource?
   remotePeerConnection.ontrack = event => {
     let remoteVideoElement = document.getElementById(id);
-    //set the remote stream to our video html element
-    remoteVideoElement.srcObject = event.streams[0];
+    //set the remote stream to our video html element - IF - this is not the arduino client
+    if(!ARDUINO_CONNECTED_CLIENT){
+      remoteVideoElement.srcObject = event.streams[0]}
+    if(ARDUINO_CONNECTED_CLIENT){
+      remoteVideoElement.pause();
+      remoteVideoElement.autoplay = false;
+      remoteVideoElement.removeAttribute('src'); // empty source
+      remoteVideoElement.load();
+    }
   };
 
   remotePeerConnection.onicecandidate = event=>{
@@ -366,6 +419,8 @@ function stopLocalVideoIfArduino(){
   .then(devices =>{
     devices.forEach(device =>{
       if(device.manufacturerName == "Arduino LLC"){
+        //this flag will cause remote video to also not be played
+        ARDUINO_CONNECTED_CLIENT = true;
         //playing the video really bogs down the pi.
         var videoElement = document.getElementById('localVideo');
         videoElement.pause();
@@ -397,9 +452,21 @@ function stopLocalVideoIfArduino(){
         stopLocalVideoIfArduino();
 
         port.onReceive = data => {
+/*
+TODO
+change this whole section.  the arduino should be sending data back to the user.
+maybe even trigger the loop for input Arduino request -> controller poll -> send to Arduino
+this can be done with binary data to, reducing data transmission.  ALthough it's small already.
+on the Arduino side Serial.write() will send binary data or use Serial.print() for sending characters.
+but have a trigger call essentially
+///////////////*/
+
           let textDecoder = new TextDecoder();
           //log input from ARDUINO Serial.print()
           console.log(textDecoder.decode(data));
+
+          dataReceivedFromRemoteArduino(data);
+
         }
         port.onReceiveError = error => {
           console.error(error);
@@ -449,11 +516,87 @@ socket.on('x',(id,data)=>{
   });
 })();
 
+///THESE FUNCTIONS ARE NOT USED YET
+function dataReceivedFromRemoteArduino(data){
+  //999 indicates Arduino ready for controller input
+  let ControllerUpdateRequest = 999;
+  //make sure it's what's expected
+  console.log(data);
+  //get the state of the controller, if that's what Arduino is asking for
+  let state = (data == ControllerUpdateRequest) ? pollControllerStateChanged() : false;
+  //if controller state is different than last time, give Arduino the update
+  if(state){sendControllerStateToArduino()};
+}
+
+
+
+function pollControllerStateChanged(){
+  //check controller state
+  //poll the controller state 
+  var controllerState = controller();//return structure array: [power, tilt,pan,turn,move,stop];
+
+  //pass the current state to stateChanged(), returns bool if changed or not compared to last state
+  let stateChanged = PREVIOUS_CONTROLLER_STATE.stateChanged(
+    {power:controllerState[0],
+    tilt:controllerState[1],
+    pan:controllerState[2],
+    turn:controllerState[3],
+    move:controllerState[4],
+    stop:controllerState[5]
+    }
+  )
+  //if the state did change, update current state to the new one.
+  if(stateChanged){
+    PREVIOUS_CONTROLLER_STATE.set(
+      {
+      power:controllerState[0],
+      tilt:controllerState[1],
+      pan:controllerState[2],
+      turn:controllerState[3],
+      move:controllerState[4],
+      stop:controllerState[5]
+        }
+    )}
+
+  return stateChanged
+}
+
+function sendControllerStateToArduino(){
+  //add header to make sure when Arduino recieves data over serial it's reading from start
+  const header_controllerUpdate = 555;
+  const header = 0;
+  const motorPowerUpdate = 1;
+  const tiltUpdate = 2;
+  const panUpdate = 3;
+  const turnUpdate = 4;
+  const moveUpdate = 5;
+  const stopMotor = 6;
+
+  //current controller state
+  let state = PREVIOUS_CONTROLLER_STATE.get();
+  //send the update in the form Arduino expects
+  //Array - form: [header, power, tilt,pan,turn,move,stop];
+  let controllerStateUpdateForArduino = new Uint8Array(7);
+
+  controllerStateUpdateForArduino[header] = header_controllerUpdate;
+  controllerStateUpdateForArduino[motorPowerUpdate] = state.power;
+  controllerStateUpdateForArduino[tiltUpdate] = state.tilt;
+  controllerStateUpdateForArduino[panUpdate] = state.pan;
+  controllerStateUpdateForArduino[turnUpdate] = state.turn;
+  controllerStateUpdateForArduino[moveUpdate] = state.move;
+  controllerStateUpdateForArduino[stopMotor] = state.stop;
+
+  socket.emit('x',ARDUINO_SocketID, controllerStateUpdateForArduino);
+
+}
+
 
 function controller(){
-   
+   //save this reference some place, don't get it this way
   let gamepad = navigator.getGamepads()[0];
-  let sensitvity = 0.5;//min threshold on axes to register as input
+
+  let motorSensitvity = 0.5;//min threshold on axes to register as input
+  let panTiltSensitivity = 0.07;
   //Each joystick has output as [horizontal,verticle] using -1 to 1 scale
   //gamepad.axes [left horz, left vert, right horz, right vert]
   //left/right axes forward is -1, backwards 1, left is -1, right is 1
@@ -485,28 +628,30 @@ function controller(){
 
   //determine motor speed up or down
   //simply the output, could force int but decided to do this way.
-  if (motorPower > sensitvity){
+  if (motorPower > motorSensitvity){
     //correct inversion since 'down' on joystick is 1
     power = -1;
   }
-  if(motorPower < -sensitvity){
+  if(motorPower < -motorSensitvity){
     //correct inversion since 'up' on joystick is -1
     power = 1;
   }
   
   //determine if Left or Right
-  if (steerInput > sensitvity){
+  if (steerInput > motorSensitvity){
     //use 0.15 because controller isn't perfect calibraion always
     turn = 1;
   }
-  if(steerInput < -sensitvity){
+  if(steerInput < -motorSensitvity){
     turn = 2;
   }
 
 
-  //-pos is to invert the input so 'up' on joystick is positive.
-  let tilt = posV*(90)+90; //convert -1 to 1 input, to a 0 to 180 servo position
-  let pan = -posH*(90)+90;
+  
+  //convert -1 to 1 input, to a 0 to 180 servo position
+  //panTiltSensitivity const, if under just leave servo at 90
+  let tilt = (posV > panTiltSensitivity || posV < - panTiltSensitivity) ? posV*(90)+90: 90; 
+  let pan = (posH > panTiltSensitivity || posH <- panTiltSensitivity) ? -posH*(90)+90: 90;//-pos is to invert the input so 'up' on joystick is positive.
   
   return [power, tilt,pan,turn,move,stop];
 
@@ -640,5 +785,5 @@ window.addEventListener("gamepadconnected", function(e){
   let turn = 0;
   let move = 0;
   
-  controllerPoll(speed,tilt,pan,turn,move);
+  //controllerPoll(speed,tilt,pan,turn,move);
 });

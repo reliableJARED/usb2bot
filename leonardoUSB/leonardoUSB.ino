@@ -92,12 +92,18 @@ void setup() {
   
 }
 
+int slowPoll = 0; 
+
 void loop() {
 
   //continue polling until first receipt of controller info
   if(!CONNECTION_STARTED){
-        Serial.print(ControllerUpdateRequest);
-        };
+        if(slowPoll % 500 == 0){
+          Serial.print(ControllerUpdateRequest);
+          Serial.flush();
+          }
+        slowPoll += 1;
+       };
         
   if (Serial && Serial.available()) {
     //when data is sent, it comes in as an Array of int.  

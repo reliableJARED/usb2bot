@@ -239,6 +239,11 @@ const roomPasswordLocker =( ()=>{
 		io.to(id).emit("x", socket.id, data);
 		
 	});
+
+	socket.on("toController", function(id,data) {       
+		io.to(id).emit("toController", socket.id, data);
+		
+	});
 	
   });
   

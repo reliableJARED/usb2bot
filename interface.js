@@ -32,6 +32,7 @@ let room = null;
 var socket = io.connect();
 var ARDUINO_SocketID = false; //SET IN ANSWER
 var ARDUINO_CONNECTED_CLIENT = false;
+const TEXT_DECODER = new TextDecoder();
 
 //CONTROLLER OBJECT HANDLER
 var PREVIOUS_CONTROLLER_STATE = (()=>{
@@ -424,6 +425,7 @@ function stopLocalVideoIfArduino(){
   .then(devices =>{
     devices.forEach(device =>{
       if(device.manufacturerName == "Arduino LLC"){
+        console.log("this is the arduino client")
         //this flag will cause remote video to also not be played
         ARDUINO_CONNECTED_CLIENT = true;
         //playing the video really bogs down the pi.
@@ -466,11 +468,15 @@ on the Arduino side Serial.write() will send binary data or use Serial.print() f
 but have a trigger call essentially
 ///////////////*/
 
-          let textDecoder = new TextDecoder();
+          
           //log input from ARDUINO Serial.print()
-          console.log(textDecoder.decode(data));
+          console.log(TEXT_DECODER.decode(data));
 
-          dataReceivedFromRemoteArduino(data);
+          //this 'data' is from arduino to connected PC - NOT - remote PC.
+          //send data to remote FIRST, then remote can use it.
+          let id_controller = allPeerConnections.keys()[0];//FIX THIS - should hold the id of controller someplace, not assume it's 0
+
+          socket.emit('toController',id_controller, data);
 
         }
         port.onReceiveError = error => {
@@ -521,12 +527,20 @@ socket.on('x',(id,data)=>{
   });
 })();
 
-///THESE FUNCTIONS ARE NOT USED YET
-function dataReceivedFromRemoteArduino(data){
+
+//data FROM the pc with arduino - to pc with controller
+socket.on('toController',(id,data)=>{
+  console.log(data);
+  dataReceivedFromRemoteArduino(data);
+});
+
+///
+function dataReceivedFromRemoteArduino(d){
   //999 indicates Arduino ready for controller input
   let ControllerUpdateRequest = 999;
   //make sure it's what's expected
-  console.log(data);
+  console.log(TEXT_DECODER.decode(d));
+  let data = TEXT_DECODER.decode(d)
   //get the state of the controller, if that's what Arduino is asking for
   let state = (data == ControllerUpdateRequest) ? pollControllerStateChanged() : false;
   //if controller state is different than last time, give Arduino the update

@@ -32,6 +32,8 @@ let room = null;
 var socket = io.connect();
 var ARDUINO_SocketID = false; //SET IN ANSWER
 var ARDUINO_CONNECTED_CLIENT = false;
+
+//CONTROLLER OBJECT HANDLER
 var PREVIOUS_CONTROLLER_STATE = (()=>{
   let maxSpeed = 255; 
   let minSpeed = 0;
@@ -41,6 +43,7 @@ var PREVIOUS_CONTROLLER_STATE = (()=>{
   let oldPanState = 0;
   let oldTiltState = 0;
   let oldStopState = 0;
+
   return{set:function(state){
         //state value: [power, tilt,pan,turn,move,stop];
         //make sure that we don't set power to be less than 0 or more than 255.
@@ -297,8 +300,10 @@ socket.on("offer", (id, description) => {
     let remoteVideoElement = document.getElementById(id);
     //set the remote stream to our video html element - IF - this is not the arduino client
     if(!ARDUINO_CONNECTED_CLIENT){
+      console.log("NOT ARDUINO CLIENT")
       remoteVideoElement.srcObject = event.streams[0]}
     if(ARDUINO_CONNECTED_CLIENT){
+      console.log("ARDUINO CLIENT")
       remoteVideoElement.pause();
       remoteVideoElement.autoplay = false;
       remoteVideoElement.removeAttribute('src'); // empty source

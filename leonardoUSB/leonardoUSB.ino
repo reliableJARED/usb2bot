@@ -93,14 +93,13 @@ void setup() {
 }
 
 void loop() {
-  
-  if (Serial && Serial.available()) {
-    
-    //continue polling until first receipt of controller info
-    if(!CONNECTION_STARTED){
+
+  //continue polling until first receipt of controller info
+  if(!CONNECTION_STARTED){
         Serial.print(ControllerUpdateRequest);
         };
-    
+        
+  if (Serial && Serial.available()) {
     //when data is sent, it comes in as an Array of int.  
     data[dataIndex++] = Serial.read();//reads one byte at a time or -1 if no data
 

@@ -130,7 +130,7 @@ const constraints = navigator.userAgent.includes("iPhone") ? {video:true} : {
 
 ////////////////////// GLOBAL TO HOLD CONNECTIONS ////////////////////////////////
 /*move this to a closure at some point*/
-const allPeerConnections = {};
+var allPeerConnections = {};
 
 //////////////////////////  GET USER MEDIA //////////////////////////
 navigator.mediaDevices.getUserMedia(constraints).then(setLocalVideo);

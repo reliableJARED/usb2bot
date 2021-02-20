@@ -474,9 +474,10 @@ but have a trigger call essentially
 
           //this 'data' is from arduino to connected PC - NOT - remote PC.
           //send data to remote FIRST, then remote can use it.
-          let id_controller = allPeerConnections.keys()[0];//FIX THIS - should hold the id of controller someplace, not assume it's 0
-
-          socket.emit('toController',id_controller, data);
+          if(allPeerConnections.keys().length != 0 ){
+              let id_controller = allPeerConnections.keys()[0];//FIX THIS - should hold the id of controller someplace, not assume it's 0
+              socket.emit('toController',id_controller, data);
+          }
 
         }
         port.onReceiveError = error => {
